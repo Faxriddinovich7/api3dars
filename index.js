@@ -5,6 +5,8 @@ let image_url = document.getElementById("image_url");
 let category = document.getElementById("category");
 let condition = document.getElementById("condition");
 let boxDiv = document.getElementById("boxDiv");
+let isPut = false;
+let id;
 
 let msgTitle = document.getElementById("inputTitle");
 let msgDescription = document.getElementById("inputDescription");
@@ -81,12 +83,10 @@ condition.addEventListener('change', () => {
     condition.style.border = condition.value !== "" ? '1px solid green' : '1px solid red';
 });
 
-
-
 async function dataB() {
-    try {
-        let response = await fetch("https://effective-mobile.duckdns.org/api/ads/", {
-            method: "POST",
+    if (isPut) {
+        let putIs = await fetch(`https://effective-mobile.duckdns.org/api/ads/${id}/`, {
+            method: 'PUT',
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 title: title.value,
@@ -97,21 +97,40 @@ async function dataB() {
             }),
         });
 
-        if (response.ok) {
-            title.value = "";
-            description.value = "";
-            image_url.value = "";
-            category.value = "";
-            condition.value = "";
-            alert("Qo‘shildi");
+        if (putIs.ok) {
+            alert("O'zgartirildi");
+            isPut = false;
+            form.reset();
             one();
         } else {
-            let error = await response.text();
-            console.log("Xatolik:", error);
-            alert("Qo‘shilmadi, serverdan xato keldi.");
+            alert("O'zgartirishda xatolik yuz berdi");
         }
-    } catch (err) {
-        console.error("Ulanishda xatolik:", err);
+    } else {
+        try {
+            let response = await fetch("https://effective-mobile.duckdns.org/api/ads/", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    title: title.value,
+                    description: description.value,
+                    image_url: image_url.value,
+                    category: category.value,
+                    condition: condition.value,
+                }),
+            });
+
+            if (response.ok) {
+                form.reset();
+                alert("Qo‘shildi");
+                one();
+            } else {
+                let error = await response.text();
+                console.log("Xatolik:", error);
+                alert("Qo‘shilmadi, serverdan xato keldi.");
+            }
+        } catch (err) {
+            console.error("Ulanishda xatolik:", err);
+        }
     }
 }
 
@@ -131,26 +150,25 @@ function two(result) {
     result.forEach((item) => {
         let div = document.createElement("div");
         div.innerHTML = `
-        <div class="card border p-4 mb- shadow bg-white rounded ">
+        <div class="card border p-4 mb- shadow bg-white rounded">
             <img src="${item.image_url}" alt="${item.title}" class="w-200 h-40 object-cover rounded">
             <p class="card-title font-bold mt-2">${item.title}</p>
             <p class="card-description text-gray-700">${item.description}</p>
             <p><strong>Category:</strong> ${item.category}</p>
             <p><strong>Condition:</strong> ${item.condition}</p>
-             <button data-id="${item.id}" class=" hover:bg-gray-500 bg-gray-400 px-10 py-2 rounded-lg mt-2 shadow text-white btn_edit">Edit</button>
+            <button data-id="${item.id}" class="hover:bg-gray-500 bg-gray-400 px-10 py-2 rounded-lg mt-2 shadow text-white btn_edit">Edit</button>
             <button data-id="${item.id}" class="bg-red-500 hover:bg-red-700 px-10 py-2 rounded-lg mt-2 shadow text-white btn_delete">Delete</button>
-          
         </div>`;
         boxDiv.appendChild(div);
     });
+
     let btns = document.querySelectorAll('.btn_edit');
     btns.forEach(btn => {
         btn.addEventListener('click', (e) => {
-                inputRender(e.target.getAttribute("data-id"));
-            });
-
-
-        })
+            inputRender(e.target.getAttribute("data-id"));
+            id = btn.getAttribute("data-id");
+        });
+    });
 
     DeleteButton();
 }
@@ -171,7 +189,7 @@ Delete.addEventListener("click", async () => {
             method: "DELETE",
         });
         if (fetchOne.ok) {
-            alert("Uchirildi");
+            alert("O'chirildi");
             one();
         } else {
             alert("Xato yuz berdi");
@@ -191,13 +209,14 @@ function DeleteButton() {
 }
 
 async function inputRender(id) {
-let dataId = await fetch(`https://effective-mobile.duckdns.org/api/ads/${id}/`)
-    let res = await dataId.json()
-    title.value = res.title
-    description.value = res.description
-    description.value = res.description
-    image_url.value = res.image_url
-    category.value = res.category
+    let dataId = await fetch(`https://effective-mobile.duckdns.org/api/ads/${id}/`);
+    let res = await dataId.json();
+    isPut = true;
+    title.value = res.title;
+    description.value = res.description;
+    image_url.value = res.image_url;
+    category.value = res.category;
+    condition.value = res.condition; // ✅ Muhim qator
 }
 one();
 
